@@ -175,7 +175,7 @@ export class HeartbeatDaemon {
         if (result.shouldWake && result.message) {
           // Pack context and wake agent
           const contextMessage = await this.packContext(task.name, result);
-          await this.wakeAgent(contextMessage, result.urgent ?? false);
+          await this.wakeAgent(contextMessage, result.urgent ?? false, task.name);
 
           // Track recent events
           this.trackEvent(task.name, result.message, result.urgent ?? false);
@@ -286,19 +286,28 @@ export class HeartbeatDaemon {
    * 普通事件：enqueueSystemEvent → 等 OC heartbeat drain
    * 紧急事件：+ openclaw system event --mode now → 秒级唤醒
    */
-  private async wakeAgent(reason: string, urgent: boolean): Promise<void> {
+  /**
+   * 唤醒 Agent（分级策略）
+   *
+   * 1. 自主思考（periodic-thinking）→ enqueueSystemEvent，等 Agent 空闲时处理
+   * 2. 普通事件 → enqueueSystemEvent，next-heartbeat
+   * 3. 紧急事件 → enqueueSystemEvent + --mode now，秒级唤醒
+   *
+   * 对标 Conway: insertWakeEvent(db, source, reason)
+   */
+  private async wakeAgent(reason: string, urgent: boolean, _taskName?: string): Promise<void> {
     this.opts.logger.info(
       `[MOSS] 🔔 Wake${urgent ? " (URGENT)" : ""}: ${reason.split("\n")[0]}`,
     );
 
     try {
-      // Use runtime API to enqueue system event
+      // 所有事件都入队
       const enqueue = this.opts.runtime?.system?.enqueueSystemEvent;
       if (enqueue) {
         enqueue(`[MOSS Loop] ${reason}`);
       }
 
-      // 紧急事件：立即触发 Agent 唤醒
+      // 紧急事件：立即触发 Agent 唤醒（即使在聊天中也会插入）
       if (urgent && this.opts.runtime?.system?.runCommandWithTimeout) {
         await this.opts.runtime.system.runCommandWithTimeout(
           "openclaw",
