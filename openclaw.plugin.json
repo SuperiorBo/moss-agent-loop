@@ -1,0 +1,36 @@
+{
+  "id": "moss-loop",
+  "name": "MOSS Agent Loop",
+  "description": "自主经济体守护进程 — 心跳、记账、生存等级、唤醒 Agent",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "default": true
+      },
+      "heartbeatIntervalMs": {
+        "type": "number",
+        "default": 60000
+      },
+      "thinkIntervalMs": {
+        "type": "number",
+        "default": 3600000
+      },
+      "bossChatId": {
+        "type": "string",
+        "default": "7517182289"
+      },
+      "serviceUrl": {
+        "type": "string",
+        "default": "https://moss.chobon.top"
+      },
+      "tradingBotName": {
+        "type": "string",
+        "default": "solana-trader"
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "moss-loop",
+  "version": "0.1.0",
+  "description": "MOSS Agent Loop - OpenClaw plugin for autonomous agent economy",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit"
+  },
+  "openclaw": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
