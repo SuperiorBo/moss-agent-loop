@@ -316,8 +316,8 @@ export class HeartbeatDaemon {
 
         try {
           await runCmd(
-            "openclaw",
             [
+              "openclaw",
               "agent",
               "--session-id", sessionId,
               "--message", thinkingPrompt,
@@ -335,22 +335,24 @@ export class HeartbeatDaemon {
       // 普通/紧急事件 → 注入主 session
       const enqueue = this.opts.runtime?.system?.enqueueSystemEvent;
       if (enqueue) {
-        enqueue(`[MOSS Loop] ${reason}`);
+        enqueue(`[MOSS Loop] ${reason}`, {
+          sessionKey: this.opts.config.bossChatId
+            ? `telegram:${this.opts.config.bossChatId}`
+            : undefined,
+        });
       }
 
       // 紧急事件：立即触发（值得打断 BOSS 聊天）
       if (urgent && runCmd) {
         await runCmd(
-          "openclaw",
           [
-            "system",
-            "event",
-            "--text",
-            `[MOSS Loop] ${reason}`,
-            "--mode",
-            "now",
+            "openclaw",
+            "agent",
+            "--session-id", `moss-urgent-${Date.now()}`,
+            "--message", `[MOSS 紧急] ${reason}\n\n请立即评估并处理，完成后用 message 工具通知 BOSS。`,
+            "--timeout", "60",
           ],
-          { timeoutMs: 10_000 },
+          { timeoutMs: 70_000 },
         );
       }
     } catch (err) {

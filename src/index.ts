@@ -45,10 +45,18 @@ const DEFAULT_CONFIG: MossLoopConfig = {
  * This is the simplest and most reliable export format for OpenClaw plugins.
  */
 export default function register(api: any) {
+  // Debug: log available config keys
+  const configKeys = Object.keys(api).filter(k => /config/i.test(k));
+  api.logger.info(`[MOSS] api keys matching 'config': ${JSON.stringify(configKeys)}`);
+  api.logger.info(`[MOSS] api.pluginConfig: ${JSON.stringify(api.pluginConfig ?? null)}`);
+  api.logger.info(`[MOSS] api.config: ${JSON.stringify(api.config ?? null)}`);
+
   const config: MossLoopConfig = {
     ...DEFAULT_CONFIG,
-    ...(api.pluginConfig ?? {}),
+    ...(api.pluginConfig ?? api.config ?? {}),
   };
+
+  api.logger.info(`[MOSS] Final config: thinkIntervalMs=${config.thinkIntervalMs}`);
 
   if (!config.enabled) {
     api.logger.info("[MOSS] Plugin disabled by config");
