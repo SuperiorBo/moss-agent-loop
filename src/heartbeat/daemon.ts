@@ -279,37 +279,68 @@ export class HeartbeatDaemon {
   // ─── Wake Agent ────────────────────────────────────────
 
   /**
-   * 唤醒 Agent Session（两级唤醒机制）
-   *
-   * 对标 Conway: insertWakeEvent(db, source, reason)
-   *
-   * 普通事件：enqueueSystemEvent → 等 OC heartbeat drain
-   * 紧急事件：+ openclaw system event --mode now → 秒级唤醒
-   */
-  /**
    * 唤醒 Agent（分级策略）
    *
-   * 1. 自主思考（periodic-thinking）→ enqueueSystemEvent，等 Agent 空闲时处理
-   * 2. 普通事件 → enqueueSystemEvent，next-heartbeat
-   * 3. 紧急事件 → enqueueSystemEvent + --mode now，秒级唤醒
+   * 关键设计：periodic-thinking 用独立 session，不打断主会话！
    *
-   * 对标 Conway: insertWakeEvent(db, source, reason)
+   * 1. 自主思考 → `openclaw agent --session-id moss-think-<ts>` 独立 session
+   * 2. 普通事件 → enqueueSystemEvent，等 next-heartbeat
+   * 3. 紧急事件 → --mode now，秒级唤醒（这种值得打断）
    */
-  private async wakeAgent(reason: string, urgent: boolean, _taskName?: string): Promise<void> {
+  private async wakeAgent(reason: string, urgent: boolean, taskName?: string): Promise<void> {
     this.opts.logger.info(
-      `[MOSS] 🔔 Wake${urgent ? " (URGENT)" : ""}: ${reason.split("\n")[0]}`,
+      `[MOSS] 🔔 Wake${urgent ? " (URGENT)" : ""} [${taskName ?? "unknown"}]: ${reason.split("\n")[0]}`,
     );
 
     try {
-      // 所有事件都入队
+      const runCmd = this.opts.runtime?.system?.runCommandWithTimeout;
+
+      // 自主思考 → 独立 session（不干扰 BOSS 聊天）
+      if (taskName === "periodic-thinking" && runCmd) {
+        this.opts.logger.info("[MOSS] 🧠 Spawning thinking session...");
+
+        const sessionId = `moss-think-${Date.now()}`;
+        const thinkingPrompt = [
+          `[MOSS 自主思考] ${reason}`,
+          "",
+          "你是 MOSS 的自主思考模块，运行在独立 session 中。",
+          "请执行以下流程：",
+          "1. 读取 SESSION-STATE.md 和 MEMORY.md 了解当前状态",
+          "2. 评估经济状况和待办事项",
+          "3. 决定下一步行动（或跳过）",
+          "4. 用 moss_log_decision 记录本次决策",
+          "5. 如有紧急事项，用 message 工具通知 BOSS",
+          "",
+          "完成后简要总结决策结果。不要发送消息到主会话。",
+        ].join("\n");
+
+        try {
+          await runCmd(
+            "openclaw",
+            [
+              "agent",
+              "--session-id", sessionId,
+              "--message", thinkingPrompt,
+              "--timeout", "120",
+            ],
+            { timeoutMs: 130_000 },
+          );
+          this.opts.logger.info(`[MOSS] 🧠 Thinking session completed: ${sessionId}`);
+        } catch (err) {
+          this.opts.logger.error(`[MOSS] Thinking session failed: ${err}`);
+        }
+        return;
+      }
+
+      // 普通/紧急事件 → 注入主 session
       const enqueue = this.opts.runtime?.system?.enqueueSystemEvent;
       if (enqueue) {
         enqueue(`[MOSS Loop] ${reason}`);
       }
 
-      // 紧急事件：立即触发 Agent 唤醒（即使在聊天中也会插入）
-      if (urgent && this.opts.runtime?.system?.runCommandWithTimeout) {
-        await this.opts.runtime.system.runCommandWithTimeout(
+      // 紧急事件：立即触发（值得打断 BOSS 聊天）
+      if (urgent && runCmd) {
+        await runCmd(
           "openclaw",
           [
             "system",
