@@ -17,6 +17,7 @@
 import type { MossLoopConfig } from "../index.js";
 import type { EconomyTracker, SurvivalTier } from "../economy/tracker.js";
 import type { HeartbeatTask, HeartbeatTaskResult } from "./tasks.js";
+import { DecisionLogger } from "../decisions/logger.js";
 import {
   createEconomyCheckTask,
   createThinkingTask,
@@ -173,7 +174,7 @@ export class HeartbeatDaemon {
 
         if (result.shouldWake && result.message) {
           // Pack context and wake agent
-          const contextMessage = this.packContext(task.name, result);
+          const contextMessage = await this.packContext(task.name, result);
           await this.wakeAgent(contextMessage, result.urgent ?? false);
 
           // Track recent events
@@ -213,7 +214,7 @@ export class HeartbeatDaemon {
    * - 当前经济状态摘要
    * - 最近事件历史
    */
-  private packContext(taskName: string, result: HeartbeatTaskResult): string {
+  private async packContext(taskName: string, result: HeartbeatTaskResult): Promise<string> {
     const { economy } = this.opts;
     const state = economy.getState();
     const tier = economy.getSurvivalTier();
@@ -240,6 +241,19 @@ export class HeartbeatDaemon {
         return `  ${urgentTag} ${ago}m ago [${e.taskName}] ${e.message}`;
       });
       sections.push(`[最近事件]\n${eventLines.join("\n")}`);
+    }
+
+    // 4. Recent decisions (for continuity)
+    const decisionLogger = DecisionLogger.getInstance();
+    if (decisionLogger) {
+      try {
+        const decisionSummary = await decisionLogger.getSummary(3);
+        if (decisionSummary) {
+          sections.push(decisionSummary);
+        }
+      } catch {
+        // ignore — decisions are optional context
+      }
     }
 
     return sections.join("\n");

@@ -6,6 +6,7 @@
  */
 
 import { EconomyTracker } from "../economy/tracker.js";
+import { DecisionLogger } from "../decisions/logger.js";
 
 export function createMossCommand(): any {
   return {
@@ -60,6 +61,17 @@ export function createMossCommand(): any {
         };
       }
 
+      // /moss decisions
+      if (args === "decisions" || args.startsWith("decisions")) {
+        const decisionLogger = DecisionLogger.getInstance();
+        if (!decisionLogger) {
+          return { text: "❌ Decision Logger 未初始化" };
+        }
+        const count = parseInt(args.split(" ")[1]) || 5;
+        const report = await decisionLogger.getReport(count);
+        return { text: report };
+      }
+
       // /moss help
       return {
         text: [
@@ -68,6 +80,7 @@ export function createMossCommand(): any {
           "命令:",
           "  /moss status — 经济状态总览",
           "  /moss ledger [数量] — 流水记录（默认10条）",
+          "  /moss decisions [数量] — 决策记录（默认5条）",
           "  /moss reward <tokens> [描述] — 记录任务奖励",
           "",
           "示例:",

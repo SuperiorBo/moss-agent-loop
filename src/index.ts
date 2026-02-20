@@ -19,6 +19,7 @@ import { createMossCommand } from "./commands/moss-cmd.js";
 
 // Re-export types for external consumers
 export type { HeartbeatTask, HeartbeatTaskResult } from "./heartbeat/tasks.js";
+export type { Decision, DecisionAction } from "./decisions/logger.js";
 export { getHeartbeatDaemon } from "./service.js";
 
 export interface MossLoopConfig {

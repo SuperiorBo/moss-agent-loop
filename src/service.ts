@@ -10,6 +10,7 @@
 import type { MossLoopConfig } from "./index.js";
 import { EconomyTracker } from "./economy/tracker.js";
 import { HeartbeatDaemon } from "./heartbeat/daemon.js";
+import { DecisionLogger } from "./decisions/logger.js";
 
 /** Module-level daemon reference for external access */
 let _daemonInstance: HeartbeatDaemon | null = null;
@@ -42,6 +43,10 @@ export function createMossLoopService(config: MossLoopConfig, api: any) {
       // 全局实例（给 Hook 和 Command 用）
       EconomyTracker.setInstance(economy);
 
+      // 初始化决策日志
+      const decisionLogger = new DecisionLogger(dataDir, api.logger);
+      DecisionLogger.setInstance(decisionLogger);
+
       // 启动心跳守护进程
       heartbeat = new HeartbeatDaemon({
         economy,
@@ -68,6 +73,7 @@ export function createMossLoopService(config: MossLoopConfig, api: any) {
         await economy.save();
         EconomyTracker.setInstance(null);
       }
+      DecisionLogger.setInstance(null);
       api.logger.info("[MOSS] Saved economy state. Goodbye.");
     },
   };

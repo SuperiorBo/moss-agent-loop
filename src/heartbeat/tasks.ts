@@ -119,6 +119,13 @@ export function createThinkingTask(
         `  Token 余额: ${state.balance.tokenCredits.toLocaleString()}`,
         `  USDC 余额: $${state.balance.usdcBalance.toFixed(4)}`,
         `  今日消耗: ${state.today.tokensSpent.toLocaleString()} tokens (${state.today.llmCalls} 次 LLM 调用)`,
+        ``,
+        `请执行以下自主思考流程:`,
+        `1. 读取 SESSION-STATE.md 和 MEMORY.md 了解当前任务状态`,
+        `2. 评估经济状况，判断是否需要调整策略`,
+        `3. 检查待办事项，决定下一步行动`,
+        `4. 完成后用 moss_log_decision 记录本次决策`,
+        `5. 如果有需要 BOSS 关注的事项，发消息通知`,
       ];
 
       return {
